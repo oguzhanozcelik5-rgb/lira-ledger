@@ -302,7 +302,7 @@
     const E = existing ? Object.assign({}, existing) : Object.assign({ id: uid(), type: 'e', cur: 'TRY', amt: 0, note: '', cat: null, ts: Date.now(), rate: S.settings.rate }, preset || {});
     let str = existing || (preset && preset.amt) ? String(E.amt).replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1') : '';
     let replaceNext = !!(preset && preset.amt); // a regular's amount is a suggestion: typing replaces it
-    const oldTs = existing ? existing.ts : null, layer = $('#layer');
+    const layer = $('#layer');
     let armed = false;
 
     const ordered = () => {
@@ -310,68 +310,73 @@
       return S.cats.filter((c) => c.type === E.type).sort((x, y) => (n[y.id] || 0) - (n[x.id] || 0));
     };
     const shown = (s) => { const [i, d] = s.split('.'); return fmt('tr-TR', +i || 0, 0) + (d !== undefined ? ',' + d : ''); };
+    const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-    function draw() {
-      const v = parseFloat(str || '0') || 0, sym = E.cur === 'GBP' ? '£' : '₺';
-      const rate = existing ? E.rate : S.settings.rate;
-      const conv = v ? (E.cur === 'GBP' ? '≈ ' + TL(v * rate, 2) : '≈ ' + GBP(v / rate, 2)) : `£1 = ${TL(rate, 2)}`;
-      const d = new Date(E.ts), today = sod(Date.now()), dd = sod(d);
-      const isToday = +dd === +today, isYest = +dd === +today - 864e5;
-      const local = new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
-      layer.innerHTML = `<div class="sheet" role="dialog" aria-label="${existing ? 'Edit entry' : 'New entry'}">
-        <div class="hd">
-          <button class="round" id="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-          <div class="seg"><button data-type="e" aria-pressed="${E.type === 'e'}">Expense</button><button data-type="i" aria-pressed="${E.type === 'i'}">Income</button></div>
-          ${existing ? `<button class="round danger" id="del" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>` : '<span style="width:40px"></span>'}
-        </div>
-        <div class="amt">
-          <div class="cur"><button data-cur="TRY" aria-pressed="${E.cur === 'TRY'}">₺ Lira</button><button data-cur="GBP" aria-pressed="${E.cur === 'GBP'}">£ Pound</button></div>
-          <div class="v num${v ? '' : ' zero'}"><span class="c">${sym}</span>${str ? esc(shown(str)) : '0'}</div>
-          <div class="conv num">${conv}</div>
-        </div>
-        <input class="note" id="note" placeholder="Note (optional)" value="${esc(E.note)}" autocomplete="off" enterkeyhint="done">
-        <div class="pick" id="pick">${ordered().map((c) => `<button data-cat="${esc(c.id)}" aria-pressed="${E.cat === c.id}"><span class="ico" style="background:${esc(c.color)}">${esc(c.emoji)}</span><span>${esc(c.name)}</span></button>`).join('')}</div>
-        <div class="when">
-          <button data-day="0" aria-pressed="${isToday}">Today</button><button data-day="1" aria-pressed="${isYest}">Yesterday</button>
-          <label>${isToday || isYest ? 'Other day' : esc(d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))} · ${hhmm(E.ts)}<input type="datetime-local" id="dt" value="${local}" aria-label="Date and time"></label>
-        </div>
-        <div class="keys">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => `<button data-k="${k}" aria-label="${k === '⌫' ? 'Delete digit' : k === '.' ? 'Decimal comma' : k}">${k === '.' ? ',' : k}</button>`).join('')}</div>
-        <button class="save${E.type === 'i' ? ' inc' : ''}" id="ok" ${v > 0 ? '' : 'disabled'}>${existing ? 'Save changes' : E.type === 'i' ? 'Add income' : 'Add expense'}</button>
-      </div>`;
-      const L = (s) => layer.querySelector(s);
-      L('#x').onclick = close;
-      layer.querySelectorAll('[data-type]').forEach((b) => (b.onclick = () => { if (E.type !== b.dataset.type) { E.type = b.dataset.type; E.cat = null; if (!existing) E.cur = E.type === 'i' ? 'GBP' : 'TRY'; draw(); } }));
-      layer.querySelectorAll('[data-cur]').forEach((b) => (b.onclick = () => { E.cur = b.dataset.cur; draw(); }));
-      layer.querySelectorAll('[data-cat]').forEach((b) => (b.onclick = () => { E.cat = b.dataset.cat; E.note = L('#note').value; draw(); }));
-      layer.querySelectorAll('[data-day]').forEach((b) => (b.onclick = () => { const t = new Date(); t.setDate(t.getDate() - +b.dataset.day); if (b.dataset.day === '1') t.setHours(20, 0, 0, 0); E.ts = +t; draw(); }));
-      L('#dt').onchange = (e) => { const t = Date.parse(e.target.value); if (!isNaN(t)) { E.ts = t; draw(); } };
-      layer.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => key(b.dataset.k)));
-      const note = L('#note');
-      note.oninput = () => {
-        E.note = note.value;
-        const g = guess(note.value, E.type);
-        if (g && g !== E.cat) { E.cat = g; layer.querySelectorAll('[data-cat]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.cat === g)); }
-      };
-      note.onkeydown = (e) => { if (e.key === 'Enter') note.blur(); };
-      L('#ok').onclick = commit;
-      const del = L('#del');
-      if (del) del.onclick = () => {
-        if (!armed) { armed = true; del.style.background = 'var(--lira-soft)'; toast('Tap again to delete'); return; }
-        S.items = S.items.filter((i) => i.id !== E.id); save(); close(); render(); toast('Deleted');
-      };
-      if (E.cat) { const s = L(`[data-cat="${CSS.escape(E.cat)}"]`); if (s) s.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    // The sheet is built once; taps only update the parts that change, so nothing flickers or jumps.
+    layer.innerHTML = `<div class="sheet" role="dialog" aria-label="${existing ? 'Edit entry' : 'New entry'}">
+      <div class="hd">
+        <button class="round" id="x" aria-label="Close">${X}</button>
+        <div class="seg" id="types"><button data-type="e">Expense</button><button data-type="i">Income</button></div>
+        ${existing ? `<button class="round danger" id="del" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>` : '<span class="round ghost"></span>'}
+      </div>
+      <div class="amt">
+        <div class="cur" id="curs"><button data-cur="TRY">₺ Lira</button><button data-cur="GBP">£ Pound</button></div>
+        <div class="v num" id="amtV"></div>
+        <div class="conv num" id="conv"></div>
+      </div>
+      <div class="line">
+        <input class="note" id="note" placeholder="Note" value="${esc(E.note)}" autocomplete="off" autocorrect="off" enterkeyhint="done">
+        <label class="when" id="when"><span id="whenT"></span><input type="datetime-local" id="dt" aria-label="Date and time"></label>
+      </div>
+      <div class="pick" id="pick"></div>
+      <div class="keys">
+        ${['1', '2', '3'].map((k) => `<button data-k="${k}">${k}</button>`).join('')}<button data-k="⌫" class="fn" aria-label="Delete digit">⌫</button>
+        ${['4', '5', '6'].map((k) => `<button data-k="${k}">${k}</button>`).join('')}<button class="ok" id="ok" aria-label="Save"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+        ${['7', '8', '9'].map((k) => `<button data-k="${k}">${k}</button>`).join('')}
+        <button data-k="." aria-label="Decimal comma">,</button><button data-k="0">0</button><button data-k="00">00</button>
+      </div>
+    </div>`;
+    const L = (s) => layer.querySelector(s);
+
+    function drawAmount() {
+      const v = parseFloat(str || '0') || 0, rate = existing ? E.rate : S.settings.rate;
+      L('#amtV').className = 'v num' + (v ? '' : ' zero');
+      L('#amtV').innerHTML = `<span class="c">${E.cur === 'GBP' ? '£' : '₺'}</span>${str ? esc(shown(str)) : '0'}`;
+      L('#conv').textContent = v ? (E.cur === 'GBP' ? '≈ ' + TL(v * rate, 2) : '≈ ' + GBP(v / rate, 2)) : `£1 = ${TL(rate, 2)}`;
+      L('#ok').disabled = !(v > 0);
+      L('#ok').classList.toggle('inc', E.type === 'i');
     }
+    function drawToggles() {
+      layer.querySelectorAll('[data-type]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.type === E.type));
+      layer.querySelectorAll('[data-cur]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.cur === E.cur));
+    }
+    function drawCats() {
+      L('#pick').innerHTML = ordered().map((c) => `<button data-cat="${esc(c.id)}" aria-pressed="${E.cat === c.id}"><span class="ico" style="background:${esc(c.color)}">${esc(c.emoji)}</span><span>${esc(c.name)}</span></button>`).join('');
+    }
+    function markCat() { layer.querySelectorAll('[data-cat]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.cat === E.cat)); L('#pick').classList.remove('need'); }
+    function drawWhen() {
+      const d = new Date(E.ts), diff = Math.round((sod(Date.now()) - sod(d)) / 864e5);
+      L('#whenT').textContent = (diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + ' ' + hhmm(E.ts);
+      L('#dt').value = new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+    }
+
     function key(k) {
-      if (k === '⌫') { str = replaceNext ? '' : str.slice(0, -1); replaceNext = false; return draw(); }
+      if (k === '⌫') { str = replaceNext ? '' : str.slice(0, -1); replaceNext = false; return drawAmount(); }
       if (replaceNext) { str = ''; replaceNext = false; }
-      if (k === '.') { if (str.includes('.')) return; str = (str || '0') + '.'; }
-      else { if (str.includes('.') && str.split('.')[1].length >= 2) return; if (str === '0') str = ''; if (str.replace('.', '').length >= 9) return; str += k; }
-      draw();
+      for (const ch of k) {
+        if (ch === '.') { if (str.includes('.')) continue; str = (str || '0') + '.'; continue; }
+        if (str.includes('.') && str.split('.')[1].length >= 2) break;
+        if (str === '0') str = '';
+        if (!str && ch === '0' && k === '00') break;
+        if (str.replace('.', '').length >= 9) break;
+        str += ch;
+      }
+      drawAmount();
     }
     function commit() {
       const v = parseFloat(str || '0');
       if (!(v > 0)) return;
-      if (!E.cat) { $('#pick').classList.add('need'); toast('Pick a category'); return; }
+      if (!E.cat) { L('#pick').classList.add('need'); toast('Pick a category'); return; }
       E.amt = Math.round(v * 100) / 100;
       E.note = (E.note || '').trim() || cat(E.cat).name;
       if (!existing) E.rate = S.settings.rate;
@@ -379,7 +384,6 @@
       if (i >= 0) S.items[i] = E; else S.items.push(E);
       S.items.sort((a, b) => b.ts - a.ts); save(); close(); render();
       toast(existing ? 'Saved' : `${E.type === 'i' ? 'Added' : 'Spent'} ${E.cur === 'GBP' ? GBP(E.amt, 2) : TL(E.amt, 2)} · ${cat(E.cat).name}`);
-      void oldTs;
     }
     function onKey(e) {
       if (e.target.tagName === 'INPUT') return;
@@ -387,9 +391,31 @@
       else if (e.key === 'Backspace') key('⌫'); else if (e.key === 'Enter') commit(); else if (e.key === 'Escape') close();
     }
     function close() { layer.innerHTML = ''; document.removeEventListener('keydown', onKey); }
+
+    L('#x').onclick = close;
+    L('#types').onclick = (e) => {
+      const b = e.target.closest('[data-type]'); if (!b || b.dataset.type === E.type) return;
+      E.type = b.dataset.type; E.cat = null; if (!existing) E.cur = E.type === 'i' ? 'GBP' : 'TRY';
+      drawToggles(); drawCats(); drawAmount();
+    };
+    L('#curs').onclick = (e) => { const b = e.target.closest('[data-cur]'); if (b) { E.cur = b.dataset.cur; drawToggles(); drawAmount(); } };
+    L('#pick').onclick = (e) => { const b = e.target.closest('[data-cat]'); if (b) { E.cat = b.dataset.cat; markCat(); } };
+    L('#dt').onchange = (e) => { const t = Date.parse(e.target.value); if (!isNaN(t)) { E.ts = t; drawWhen(); } };
+    layer.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => key(b.dataset.k)));
+    const note = L('#note');
+    note.oninput = () => { E.note = note.value; const g = guess(note.value, E.type); if (g && g !== E.cat) { E.cat = g; markCat(); } };
+    note.onkeydown = (e) => { if (e.key === 'Enter') note.blur(); };
+    L('#ok').onclick = commit;
+    const del = L('#del');
+    if (del) del.onclick = () => {
+      if (!armed) { armed = true; del.style.background = 'var(--lira-soft)'; toast('Tap again to delete'); return; }
+      S.items = S.items.filter((i) => i.id !== E.id); save(); close(); render(); toast('Deleted');
+    };
     document.addEventListener('keydown', onKey);
-    draw();
+    drawToggles(); drawCats(); drawAmount(); drawWhen();
+    if (E.cat) { const s = L(`[data-cat="${CSS.escape(E.cat)}"]`); if (s) L('#pick').scrollLeft = Math.max(0, s.offsetLeft - 16); }
   }
+
   function guess(note, type) {
     const n = lower(note.trim()); if (n.length < 2) return null;
     const c = S.cats.find((x) => x.type === type && lower(x.name).startsWith(n)); if (c) return c.id;
