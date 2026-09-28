@@ -3,6 +3,7 @@
   'use strict';
 
   const KEY = 'ledger.v1';
+  const VERSION = 4;
   // Bank of England monthly average GBP/TRY. Used for entries imported without a rate.
   const MONTH_RATES = {
     '2026-01': 58.41, '2026-02': 59.29, '2026-03': 58.93, '2026-04': 60.41, '2026-05': 61.39,
@@ -294,7 +295,7 @@
     $('#catEdit').innerHTML = S.cats.map((c) => `<button data-edit="${esc(c.id)}"><span class="ico" style="background:${esc(c.color)}">${esc(c.emoji)}</span><span>${esc(c.name)}</span></button>`).join('') +
       `<button class="addc" data-edit="">+ New</button>`;
     const first = S.items.length ? new Date(S.items[S.items.length - 1].ts) : null;
-    $('#about').textContent = `${S.items.length} entries${first ? ' since ' + first.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`;
+    $('#about').textContent = `${S.items.length} entries${first ? ' since ' + first.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''} · Version ${VERSION}`;
   }
 
   /* ---------- add / edit ---------- */
@@ -552,5 +553,17 @@
   go(UI.view);
   if (Date.now() - (S.settings.rateAt || 0) > 36e5) refreshRate();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => { });
+  // Updates install themselves: check whenever the app comes back to the screen, and reload once
+  // when a new version takes over, so fixes never wait for the app to be closed.
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded || document.querySelector('.sheet, .modal')) return;
+      reloaded = true; location.reload();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); });
+    }).catch(() => { });
+  }
 })();
