@@ -41,7 +41,7 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 var(--body); -webkit-tap-highlight-color: transparent; overflow: hidden; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; touch-action: manipulation; }
 label, input { touch-action: manipulation; }
@@ -226,7 +226,8 @@ main { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 18p
 .pick.need button .ico { outline: 2px solid var(--lira); }
 .keys { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: clamp(44px, 6.4dvh, 58px); gap: 8px; }
 .keys button { text-align: center; border-radius: 14px; background: var(--surface); font: 600 24px var(--display); box-shadow: var(--shadow); -webkit-user-select: none; user-select: none; }
-.keys button:active { background: var(--surface-2); }
+.keys button:active, .keys button.down { background: var(--surface-2); }
+.keys, .keys button { touch-action: none; }
 .keys .fn { background: var(--surface-2); box-shadow: none; font-size: 22px; }
 .keys .ok { grid-column: 4; grid-row: 2 / span 3; background: var(--lira); color: #fff; display: grid; place-items: center; box-shadow: none; }
 .keys .ok:active { background: var(--lira); filter: brightness(.92); }

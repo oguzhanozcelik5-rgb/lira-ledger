@@ -1,6 +1,6 @@
 // Offline support: the app's own files come from the network when online and from the
 // cache when offline; exchange-rate requests always go to the network and are never cached.
-const CACHE = 'ledger-v2';
+const CACHE = 'ledger-v3';
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

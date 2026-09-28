@@ -401,7 +401,11 @@
     L('#curs').onclick = (e) => { const b = e.target.closest('[data-cur]'); if (b) { E.cur = b.dataset.cur; drawToggles(); drawAmount(); } };
     L('#pick').onclick = (e) => { const b = e.target.closest('[data-cat]'); if (b) { E.cat = b.dataset.cat; markCat(); } };
     L('#dt').onchange = (e) => { const t = Date.parse(e.target.value); if (!isNaN(t)) { E.ts = t; drawWhen(); } };
-    layer.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => key(b.dataset.k)));
+    // Keys react on touch-down, so quick repeated taps (like 11 or 00) each count and never zoom.
+    layer.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); b.classList.add('down'); key(b.dataset.k);
+      setTimeout(() => b.classList.remove('down'), 120);
+    }));
     const note = L('#note');
     note.oninput = () => { E.note = note.value; const g = guess(note.value, E.type); if (g && g !== E.cat) { E.cat = g; markCat(); } };
     note.onkeydown = (e) => { if (e.key === 'Enter') note.blur(); };
