@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lira Ledger</title>
+<meta name="description" content="Personal spending in lira, seen in pounds.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1016" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28"><span>Ledger</span></div>
+    <button class="rate" id="rateChip" aria-label="Exchange rate"></button>
+  </header>
+
+  <main id="main">
+    <!-- HOME -->
+    <section class="view" id="v-home">
+      <button class="hero" id="hero" aria-label="Swap pounds and lira">
+        <div class="hero-top"><span class="eyebrow" id="heroLabel">Spent in September</span><span class="swap" aria-hidden="true">₺ ⇄ £</span></div>
+        <div class="hero-main num" id="heroMain"></div>
+        <div class="hero-alt num" id="heroAlt"></div>
+        <div class="hero-meta" id="heroMeta"></div>
+        <div id="heroBudget"></div>
+      </button>
+
+      <div class="section-head"><h2>Add again</h2><span class="hint">Your regulars</span></div>
+      <div class="regulars" id="regulars"></div>
+
+      <div class="section-head"><h2>Recent</h2><button class="link" data-go="history">See all</button></div>
+      <div id="recent"></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="view" id="v-stats" hidden>
+      <div class="stats-head">
+        <div class="seg" id="rangeSeg" role="group" aria-label="Period">
+          <button data-r="week">Week</button><button data-r="month">Month</button><button data-r="year">Year</button>
+        </div>
+        <div class="pnav">
+          <button id="prevP" aria-label="Previous period">‹</button>
+          <span id="pLabel"></span>
+          <button id="nextP" aria-label="Next period">›</button>
+        </div>
+      </div>
+
+      <div class="totals">
+        <button class="total" id="tE" data-k="e"><span class="k">Spent</span><span class="v num" id="tEv"></span><span class="s num" id="tEs"></span></button>
+        <button class="total" id="tI" data-k="i"><span class="k">Earned</span><span class="v num" id="tIv"></span><span class="s num" id="tIs"></span></button>
+      </div>
+      <p class="pace" id="pace"></p>
+
+      <div class="chart" id="chart"></div>
+
+      <div class="section-head"><h2>By category</h2><span class="hint" id="catHint"></span></div>
+      <div id="catRank"></div>
+
+      <div class="section-head"><h2>Biggest</h2></div>
+      <div id="biggest"></div>
+
+      <div id="statList"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="view" id="v-history" hidden>
+      <div class="search"><input id="q" type="search" placeholder="Search notes" autocomplete="off" aria-label="Search notes"></div>
+      <div class="chips" id="catChips"></div>
+      <div class="hist-sum num" id="histSum"></div>
+      <div id="histList"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="v-settings" hidden>
+      <h1>Settings</h1>
+      <div class="card">
+        <div class="row"><div><strong>Exchange rate</strong><p class="hint" id="rateInfo"></p></div>
+          <input class="field num" id="rateIn" inputmode="decimal" aria-label="Lira per pound"></div>
+        <div class="row"><span>Update automatically</span><label class="switch"><input type="checkbox" id="autoRate"><i></i></label></div>
+        <p class="hint">Each entry keeps the rate of the day you added it, so older months stay right as the lira moves.</p>
+      </div>
+      <div class="card">
+        <div class="row"><div><strong>Monthly budget</strong><p class="hint">In pounds, optional</p></div>
+          <input class="field num" id="budgetIn" inputmode="decimal" placeholder="£" aria-label="Monthly budget in pounds"></div>
+        <div class="row"><span>Show pounds first</span><label class="switch"><input type="checkbox" id="gbpFirst"><i></i></label></div>
+      </div>
+      <div class="card">
+        <strong>Categories</strong>
+        <div class="catgrid" id="catEdit"></div>
+      </div>
+      <div class="card">
+        <strong>Your data</strong>
+        <p class="hint">Everything is stored on this phone only. Nothing is sent anywhere. Save a backup now and then.</p>
+        <div class="btnrow">
+          <button class="btn primary" id="exportBtn">Save backup</button>
+          <label class="btn" for="importIn">Import file</label>
+          <input type="file" id="importIn" accept=".json,.csv,text/csv,application/json" hidden>
+        </div>
+        <p class="hint">Import takes a backup (.json) or a Dime export (.csv). Entries you already have are skipped.</p>
+      </div>
+      <p class="hint center" id="about"></p>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="Main">
+    <button class="tab" data-v="home"><svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20a1 1 0 01-1 1h-4.5v-6h-5v6H5a1 1 0 01-1-1z"/></svg><span>Home</span></button>
+    <button class="tab" data-v="stats"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Stats</span></button>
+    <button class="fab" id="addBtn" aria-label="Add entry"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tab" data-v="history"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>History</span></button>
+    <button class="tab" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></svg><span>Settings</span></button>
+  </nav>
+</div>
+<div id="layer"></div>
+<script src="app.js"></script>
+</body>
+</html>
